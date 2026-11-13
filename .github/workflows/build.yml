@@ -1,1 +1,60 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm install
+      - run: npm test
+      - run: npx cap add android
+      - name: Fullscreen and display cutout (styles.xml)
+        run: |
+          F=android/app/src/main/res/values/styles.xml
+          sed -i 's|<style name="AppTheme.NoActionBar"[^>]*>|&<item name="android:windowFullscreen">true</item><item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>|' $F
+          grep -q windowFullscreen $F && echo "styles.xml patched" || echo "WARNING: styles.xml not patched"
+      - name: Immersive mode (MainActivity)
+        run: |
+          cat > android/app/src/main/java/com/worlddominion/game/MainActivity.java <<'EOF'
+          package com.worlddominion.game;
 
+          import android.os.Bundle;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              hideBars();
+            }
+            @Override
+            public void onWindowFocusChanged(boolean hasFocus) {
+              super.onWindowFocusChanged(hasFocus);
+              if (hasFocus) hideBars();
+            }
+            private void hideBars() {
+              WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+              WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+              c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+              c.hide(WindowInsetsCompat.Type.systemBars());
+            }
+          }
+          EOF
+      - run: npx cap sync android
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WorldDominion-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
