@@ -1,0 +1,20 @@
+{
+  "name": "world-dominion",
+  "version": "1.3.0",
+  "private": true,
+  "description": "Offline-first Persian grand strategy and country management game",
+  "scripts": {
+    "test:logic": "node tests/logic.js",
+    "test:countries": "node tests/countries.js",
+    "test:war": "node tests/war.js",
+    "test": "npm run test:logic && npm run test:countries",
+    "android:sync": "cap sync android",
+    "android:debug": "cd android && gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/cli": "^6.1.0",
+    "@capacitor/core": "^6.1.0"
+  }
+}
